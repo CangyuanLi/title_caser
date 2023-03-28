@@ -9,6 +9,8 @@
 **/.idea
 **/*.egg-info
 
+**/temp.py
+
 **.csv
 **.dta
 **.smcl
