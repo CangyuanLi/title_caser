@@ -119,7 +119,8 @@ class Styler:
         return "-" in word and word[-1] != "-"
 
     @staticmethod
-    def lowercase_after_dash(word: str, dash_pos: int) -> str:
+    def lowercase_after_dash(word: str) -> str:
+        dash_pos = word.index("-")
         before_dash = word[: dash_pos + 1].title()
         after_dash = word[dash_pos + 2 :]
 
@@ -143,6 +144,13 @@ class Styler:
     @staticmethod
     def is_first_word_of_paranthetical(word: str) -> bool:
         return cutils.contains(word[0], ("(", "{"))
+
+    @staticmethod
+    def uppercase_plural_acronyms(word: str) -> str:
+        last_s = cutils.find_last_index(word, "s")
+        correct_word = word[:last_s].upper() + "s" + word[last_s + 1 :].upper()
+
+        return correct_word
 
     @staticmethod
     def capitalize(word: str) -> str:
@@ -228,12 +236,10 @@ class Styler:
                 correct_word = word.upper()
 
             if word_info.is_plural_acronym:
-                last_s = cutils.find_last_index(word, "s")
-                correct_word = word[:last_s].upper() + "s" + word[last_s + 1 :].upper()
+                correct_word = self.uppercase_plural_acronyms(word)
 
             if word_info.is_hyphenated:
-                dash_pos = word.index("-")
-                correct_word = self.lowercase_after_dash(word, dash_pos)
+                correct_word = self.lowercase_after_dash(word)
 
             corrected.append(correct_word)
 
