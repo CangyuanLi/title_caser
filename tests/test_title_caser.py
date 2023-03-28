@@ -6,7 +6,7 @@ TITLE1 = (
 )
 
 TITLE2 = (
-    "How Much do Bank Shocks Affect Investment? Evidence from Matched Bank-Firm Loan"
+    "How Much do Bank Shocks AfFect Investment? evidence from Matched Bank-Firm Loan"
     " Data"
 )
 
