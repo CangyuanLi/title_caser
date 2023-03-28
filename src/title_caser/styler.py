@@ -12,6 +12,7 @@ from .hardcoded_words import ACRONYMS, ARTICLES, PREPOSITIONS, VALID_TWO_LETTER_
 
 nltk.download("averaged_perceptron_tagger", quiet=True)
 nltk.download("punkt", quiet=True)
+nltk.download("universal_tagset", quiet=True)
 
 
 @dataclasses.dataclass
