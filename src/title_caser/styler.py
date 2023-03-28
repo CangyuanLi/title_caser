@@ -95,8 +95,6 @@ class Styler:
         word_no_trailing_punc = word.rstrip(string.punctuation)
         if word_no_trailing_punc[-1] == "s":
             s_pos = cutils.find_last_index(word, "s")
-            assert s_pos is not None  # get mypy off my back
-
             word_no_s = word[:s_pos] + word[s_pos + 1 :]
 
             return self.is_acronym(word_no_s)
@@ -197,8 +195,6 @@ class Styler:
 
             if word_info.is_plural_acronym:
                 last_s = cutils.find_last_index(word, "s")
-                assert last_s is not None
-
                 correct_word = word[:last_s].upper() + "s" + word[last_s + 1 :].upper()
 
             if word_info.is_hyphenated:
