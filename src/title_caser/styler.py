@@ -18,6 +18,7 @@ nltk.download("punkt")
 class WordInfo:
     word: str
     is_acronym: bool
+    is_after_puncutation: bool
     is_article: bool
     is_coordinating_conjuction: bool
     is_first_word: bool
@@ -37,10 +38,10 @@ class Styler:
             title (str): The title
             acronyms (set[str], optional): A set of acronyms. Defaults to ACRONYMS.
         """
-        self._title = title
-        self._acronyms = acronyms
-        self._words = self.clean_and_split_title()
-        self._tagged_words = self.tag_words()
+        self._title: str = title
+        self._acronyms: set[str] = acronyms
+        self._words: list[str] = self.clean_and_split_title()
+        self._tagged_words: list[WordInfo] = self.tag_words()
 
     def clean_and_split_title(self) -> list[str]:
         title = self._title
@@ -96,8 +97,7 @@ class Styler:
             s_pos = cutils.find_last_index(word, "s")
             assert s_pos is not None  # get mypy off my back
 
-            # fmt: off
-            word_no_s = word[:s_pos] + word[s_pos + 1:]
+            word_no_s = word[:s_pos] + word[s_pos + 1 :]
 
             return self.is_acronym(word_no_s)
 
@@ -119,11 +119,43 @@ class Styler:
     def is_hyphenated(word: str) -> bool:
         return "-" in word and word[-1] != "-"
 
+    @staticmethod
+    def lowercase_after_dash(word: str, dash_pos: int) -> str:
+        before_dash = word[: dash_pos + 1].title()
+        after_dash = word[dash_pos + 2 :]
+
+        return before_dash + word[dash_pos + 1].lower() + after_dash
+
+    @staticmethod
+    def is_after_punctuation(previous_word: str) -> bool:
+        """Tests if the word comes after a word that ends in punctuation, e.g.
+            "Empirical Investment Equations: An Integrative Framework"
+
+        Args:
+            previous_word (str): The previous word in the title
+
+        Returns:
+            bool:
+        """
+        puncs = {":", "?", "!", ".", "--", "-"}
+
+        return previous_word[-1] in puncs
+
     def tag_words(self):
         nltk_tags = nltk.pos_tag(self._words)
         tagged_words = []
         for idx, word_tag in enumerate(nltk_tags):
             word, tag = word_tag
+
+            if idx != 0:
+                previous_word, _ = nltk_tags[idx - 1]
+            else:
+                # If this is the first word, idx - 1 is -1, and is therefore the last word in the
+                # list. Since we just use the previous word to test if it comes after punctuation
+                # setting the previous word to something w/o punctuation makes is_after_punctuation
+                # return False.
+                previous_word, _ = "SENTINEL"
+
             tagged_word = WordInfo(
                 word=word,
                 is_acronym=self.is_acronym(word),
@@ -135,10 +167,43 @@ class Styler:
                 is_last_word=(idx == len(nltk_tags) - 1),
                 is_hyphenated=self.is_hyphenated(word),
                 is_subordinating_conjuction=self.is_subordinating_conjuction(word, tag),
+                is_after_puncutation=self.is_after_punctuation(previous_word),
             )
             tagged_words.append(tagged_word)
 
         return tagged_words
+
+    def chicago_case(self) -> str:
+        for word_info in self._tagged_words:
+            word = word_info.word
+            if (
+                word_info.is_article
+                or word_info.is_coordinating_conjuction
+                or word_info.is_preposition
+            ):
+                correct_word = word.lower()
+            else:
+                correct_word = word.capitalize()
+
+            if (
+                word_info.is_first_word
+                or word_info.is_last_word
+                or word_info.is_after_puncutation
+            ):
+                correct_word = word.capitalize()
+
+            if word_info.is_acronym:
+                correct_word = word.upper()
+
+            if word_info.is_plural_acronym:
+                last_s = cutils.find_last_index(word, "s")
+                assert last_s is not None
+
+                correct_word = word[:last_s].upper() + "s" + word[last_s + 1 :].upper()
+
+            if word_info.is_hyphenated:
+                dash_pos = word.index("-")
+                correct_word = self.lowercase_after_dash(word, dash_pos)
 
     # Capitalize the first and the last word.
     # Capitalize nouns, pronouns, adjectives, verbs (including phrasal verbs such as “play with”), adverbs, and subordinate conjunctions.
