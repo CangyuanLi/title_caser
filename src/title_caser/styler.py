@@ -22,6 +22,7 @@ class WordInfo:
     is_article: bool
     is_coordinating_conjuction: bool
     is_first_word: bool
+    is_first_word_of_paranthetical: bool
     is_hyphenated: bool
     is_last_word: bool
     is_plural_acronym: bool
@@ -139,6 +140,32 @@ class Styler:
 
         return previous_word[-1] in puncs
 
+    @staticmethod
+    def is_first_word_of_paranthetical(word: str) -> bool:
+        return cutils.contains(word[0], ("(", "{"))
+
+    @staticmethod
+    def capitalize(word: str) -> str:
+        """Capitalize but ignore punctuation. This is needed because the builtin .capitalize()
+        method will return "(the" from "(the" instead of "(The".
+
+        Args:
+            word (str): word
+
+        Returns:
+            str: capitalized word
+        """
+        word_lst = []
+        first = True
+        for c in word:
+            if c not in string.punctuation and first:
+                c = c.upper()
+                first = False
+
+            word_lst.append(c)
+
+        return "".join(word_lst)
+
     def tag_words(self):
         nltk_tags = nltk.pos_tag(self._words)
         tagged_words = []
@@ -152,7 +179,7 @@ class Styler:
                 # list. Since we just use the previous word to test if it comes after punctuation
                 # setting the previous word to something w/o punctuation makes is_after_punctuation
                 # return False.
-                previous_word, _ = "SENTINEL"
+                previous_word = "SENTINEL"
 
             tagged_word = WordInfo(
                 word=word,
@@ -166,12 +193,16 @@ class Styler:
                 is_hyphenated=self.is_hyphenated(word),
                 is_subordinating_conjuction=self.is_subordinating_conjuction(word, tag),
                 is_after_puncutation=self.is_after_punctuation(previous_word),
+                is_first_word_of_paranthetical=self.is_first_word_of_paranthetical(
+                    word
+                ),
             )
             tagged_words.append(tagged_word)
 
         return tagged_words
 
     def chicago_case(self) -> str:
+        corrected = []
         for word_info in self._tagged_words:
             word = word_info.word
             if (
@@ -190,6 +221,9 @@ class Styler:
             ):
                 correct_word = word.capitalize()
 
+            if word_info.is_first_word_of_paranthetical:
+                correct_word = self.capitalize(word)
+
             if word_info.is_acronym:
                 correct_word = word.upper()
 
@@ -201,16 +235,15 @@ class Styler:
                 dash_pos = word.index("-")
                 correct_word = self.lowercase_after_dash(word, dash_pos)
 
-    # Capitalize the first and the last word.
-    # Capitalize nouns, pronouns, adjectives, verbs (including phrasal verbs such as “play with”), adverbs, and subordinate conjunctions.
-    # Lowercase articles (a, an, the), coordinating conjunctions, and prepositions (regardless of length).
-    # Lowercase the second word after a hyphenated prefix (e.g., Mid-, Anti-, Super-, etc.) in compound modifiers (e.g., Mid-year, Anti-hero, etc.).
-    # Lowercase the ‘to’ in an infinitive (e.g., I Want to Play Guitar).
+            corrected.append(correct_word)
+
+        return " ".join(corrected)
 
 
 def main():
-    title = "something here blah-dku"
-    Styler(title).tag_words()
+    title = "Corporate distress diagnosis: Comparisons using linear discriminant analysis and neural networks (the Italian experience)"
+    title = Styler(title).chicago_case()
+    print(title)
 
 
 if __name__ == "__main__":
