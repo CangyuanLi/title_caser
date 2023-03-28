@@ -10,8 +10,8 @@ from .hardcoded_words import ACRONYMS, ARTICLES, PREPOSITIONS, VALID_TWO_LETTER_
 
 # Globals
 
-nltk.download("averaged_perceptron_tagger")
-nltk.download("punkt")
+nltk.download("averaged_perceptron_tagger", quiet=True)
+nltk.download("punkt", quiet=True)
 
 
 @dataclasses.dataclass
@@ -244,3 +244,44 @@ class Styler:
             corrected.append(correct_word)
 
         return " ".join(corrected)
+
+    def apa_case(self) -> str:
+        corrected = []
+        for word_info in self._tagged_words:
+            word = word_info.word
+            if (
+                word_info.is_article
+                or word_info.is_coordinating_conjuction
+                or word_info.is_preposition
+            ):
+                correct_word = word.lower()
+            else:
+                correct_word = word.capitalize()
+
+            if (
+                word_info.is_first_word
+                or word_info.is_last_word
+                or word_info.is_after_puncutation
+            ):
+                correct_word = word.capitalize()
+
+            if word_info.is_first_word_of_paranthetical:
+                correct_word = self.capitalize(word)
+
+            if word_info.is_acronym:
+                correct_word = word.upper()
+
+            if word_info.is_plural_acronym:
+                correct_word = self.uppercase_plural_acronyms(word)
+
+            if word_info.is_hyphenated:
+                correct_word = self.lowercase_after_dash(word)
+
+            corrected.append(correct_word)
+
+        return " ".join(corrected)
+
+    # Capitalize the first word of the title/heading and of any subtitle/subheading
+    # Capitalize all major words (nouns, verbs including phrasal verbs such as “play with”, adjectives, adverbs, and pronouns) in the title/heading, including the second part of hyphenated major words (e.g., Self-Report not Self-report)
+    # Capitalize all words of four letters or more.
+    # Lowercase the second word after a hyphenated prefix (e.g., Mid-, Anti-, Super-, etc.) in compound modifiers (e.g., Mid-year, Anti-hero, etc.).
