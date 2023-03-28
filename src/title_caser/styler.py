@@ -104,13 +104,11 @@ class Styler:
         return False
 
     @staticmethod
-    def is_coordinating_conjunction(nltk_tagged_word: tuple[str, str]) -> bool:
-        return nltk_tagged_word[1] == "CC"
+    def is_coordinating_conjunction(tag: str) -> bool:
+        return tag == "CC"
 
     @staticmethod
-    def is_subordinating_conjuction(nltk_tagged_word: tuple[str, str]) -> bool:
-        word, tag = nltk_tagged_word
-
+    def is_subordinating_conjuction(word: str, tag: str) -> bool:
         return word not in PREPOSITIONS and tag == "IN"
 
     @staticmethod
@@ -125,18 +123,18 @@ class Styler:
         nltk_tags = nltk.pos_tag(self._words)
         tagged_words = []
         for idx, word_tag in enumerate(nltk_tags):
-            word, _ = word_tag
+            word, tag = word_tag
             tagged_word = WordInfo(
                 word=word,
                 is_acronym=self.is_acronym(word),
                 is_plural_acronym=self.is_plural_acronym(word),
                 is_article=self.is_article(word),
-                is_coordinating_conjuction=self.is_coordinating_conjunction(word_tag),
+                is_coordinating_conjuction=self.is_coordinating_conjunction(tag),
                 is_preposition=self.is_preposition(word),
                 is_first_word=(idx == 0),
                 is_last_word=(idx == len(nltk_tags) - 1),
                 is_hyphenated=self.is_hyphenated(word),
-                is_subordinating_conjuction=self.is_subordinating_conjuction(word_tag),
+                is_subordinating_conjuction=self.is_subordinating_conjuction(word, tag),
             )
             tagged_words.append(tagged_word)
 
