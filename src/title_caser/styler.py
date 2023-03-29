@@ -6,13 +6,20 @@ import string
 import cutils
 import nltk
 
-from .hardcoded_words import ACRONYMS, ARTICLES, PREPOSITIONS, VALID_TWO_LETTER_WORDS
+from .hardcoded_words import (
+    ACRONYMS,
+    ARTICLES,
+    PREPOSITIONS,
+    SPECIAL,
+    VALID_TWO_LETTER_WORDS,
+)
 
 # Globals
 
 nltk.download("averaged_perceptron_tagger", quiet=True)
 nltk.download("punkt", quiet=True)
-nltk.download("universal_tagset", quiet=True)
+
+# Types
 
 
 @dataclasses.dataclass
@@ -210,43 +217,18 @@ class Styler:
 
         return tagged_words
 
-    def chicago_case(self) -> str:
-        corrected = []
-        for word_info in self._tagged_words:
-            word = word_info.word
-            if (
-                word_info.is_article
-                or word_info.is_coordinating_conjuction
-                or word_info.is_preposition
-            ):
-                correct_word = word.lower()
-            else:
-                correct_word = word.capitalize()
 
-            if (
-                word_info.is_first_word
-                or word_info.is_last_word
-                or word_info.is_after_puncutation
-            ):
-                correct_word = word.capitalize()
+class ChicagoStyler(Styler):
+    def __init__(
+        self,
+        title: str,
+        acronyms: set[str] = ACRONYMS,
+        special: dict[str, str] = SPECIAL,
+    ):
+        super().__init__(title, acronyms)
+        self._special = special
 
-            if word_info.is_first_word_of_paranthetical:
-                correct_word = self.capitalize(word)
-
-            if word_info.is_acronym:
-                correct_word = word.upper()
-
-            if word_info.is_plural_acronym:
-                correct_word = self.uppercase_plural_acronyms(word)
-
-            if word_info.is_hyphenated:
-                correct_word = self.lowercase_after_dash(word)
-
-            corrected.append(correct_word)
-
-        return " ".join(corrected)
-
-    def apa_case(self) -> str:
+    def title_case(self) -> str:
         corrected = []
         for word_info in self._tagged_words:
             word = word_info.word
