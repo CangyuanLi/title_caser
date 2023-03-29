@@ -39,18 +39,25 @@ class WordInfo:
 
 
 class Styler:
-    def __init__(self, title: str, acronyms: set[str] = ACRONYMS):
-        """Title is required to be passed in. Acronyms may be passed in since it is desireable
-        for the user to be able to define a custom list of acronyms, e.g. for a specific field.
+    def __init__(
+        self,
+        title: str,
+        acronyms: set[str] = ACRONYMS,
+        special: dict[str, str] = SPECIAL,
+    ):
+        """Title is required to be passed in. Acronyms may be passed in since it is
+        desireable for the user to be able to define a custom list of acronyms, e.g. for
+        a specific field.
 
         Args:
             title (str): The title
             acronyms (set[str], optional): A set of acronyms. Defaults to ACRONYMS.
         """
-        self._title: str = title
-        self._acronyms: set[str] = acronyms
-        self._words: list[str] = self.clean_and_split_title()
-        self._tagged_words: list[WordInfo] = self.tag_words()
+        self._title = title
+        self._acronyms = acronyms
+        self._special = special
+        self._words = self.clean_and_split_title()
+        self._tagged_words = self.tag_words()
 
     def clean_and_split_title(self) -> list[str]:
         title = self._title
@@ -69,18 +76,18 @@ class Styler:
         return word[0] == "(" and word[-1] == ")"
 
     def is_acronym(self, word: str) -> bool:
-        """There is no good way of determining if a a word is an acronym. Therefore, several
-        heuristics are used.
+        """There is no good way of determining if a a word is an acronym. Therefore,
+        several heuristics are used.
 
         1. Word is in a pre-defined list of acronyms
-        2. Word contains "&" or "/", e.g. K&R, A/B. It is unlikely that a non-acronym word would
-        contain these characters.
-        3. Word is between parantheses AND word is four letters or less. In a title specifically,
-        parantheses likely do not denote a note (like so), rather, they more likely contain an
-        acronym, e.g. County Business Patterns (CBP)
-        4. Word is two letters (and word is not in valid two letter words, a manual list of all
-        two letter words). Note that this list does not contain "us", since it is much more likely
-        that "us" refers to "US" in a title.
+        2. Word contains "&" or "/", e.g. K&R, A/B. It is unlikely that a non-acronym
+        word would contain these characters.
+        3. Word is between parantheses AND word is four letters or less. In a title
+        specifically, parantheses likely do not denote a note (like so), rather, they
+        more likely contain an acronym, e.g. County Business Patterns (CBP)
+        4. Word is two letters (and word is not in valid two letter words, a manual list
+        of all two letter words). Note that this list does not contain "us", since it is
+        much more likely that "us" refers to "US" in a title.
 
         Args:
             word (str): _description_
@@ -162,8 +169,8 @@ class Styler:
 
     @staticmethod
     def capitalize(word: str) -> str:
-        """Capitalize but ignore punctuation. This is needed because the builtin .capitalize()
-        method will return "(the" from "(the" instead of "(The".
+        """Capitalize but ignore punctuation. This is needed because the builtin
+        .capitalize() method will return "(the" from "(the" instead of "(The".
 
         Args:
             word (str): word
@@ -182,7 +189,7 @@ class Styler:
 
         return "".join(word_lst)
 
-    def tag_words(self):
+    def tag_words(self) -> list[WordInfo]:
         nltk_tags = nltk.pos_tag(self._words)
         tagged_words = []
         for idx, word_tag in enumerate(nltk_tags):
@@ -191,10 +198,10 @@ class Styler:
             if idx != 0:
                 previous_word, _ = nltk_tags[idx - 1]
             else:
-                # If this is the first word, idx - 1 is -1, and is therefore the last word in the
-                # list. Since we just use the previous word to test if it comes after punctuation
-                # setting the previous word to something w/o punctuation makes is_after_punctuation
-                # return False.
+                # If this is the first word, idx - 1 is -1, and is therefore the last
+                # word in the list. Since we just use the previous word to test if it
+                # comes after punctuation setting the previous word to something w/o
+                # punctuation makes is_after_punctuation return False.
                 previous_word = "SENTINEL"
 
             tagged_word = WordInfo(
@@ -225,8 +232,7 @@ class ChicagoStyler(Styler):
         acronyms: set[str] = ACRONYMS,
         special: dict[str, str] = SPECIAL,
     ):
-        super().__init__(title, acronyms)
-        self._special = special
+        super().__init__(title, acronyms, special)
 
     def title_case(self) -> str:
         corrected = []
