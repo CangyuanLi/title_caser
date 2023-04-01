@@ -270,3 +270,31 @@ VALID_TWO_LETTER_WORDS = {
     "up",
     "we",
 }  # no "us" because in title it is much more likely to refer to "US"
+
+# These are special words that will simply be replaced according to a match
+_special = {"iPhone", "iPad", "iPod", "E-mail"}
+SPECIAL = {word.lower(): word for word in _special}
+
+# List of prefixes- these cannot stand on their own
+PREFIXES = {
+    "ante",
+    "anti",
+    "contra",
+    "dis",
+    "ex",
+    "hemi",
+    "hypo",
+    "infra",
+    "inter",
+    "intra",
+    "non",
+    "peri",
+    "post",
+    "pre",
+    "pro",
+    "re",
+    "semi",
+    "sub",
+    "syn",
+    "trans",
+}
