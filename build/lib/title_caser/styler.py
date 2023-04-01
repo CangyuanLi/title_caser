@@ -6,43 +6,61 @@ import string
 import cutils
 import nltk
 
-from .hardcoded_words import ACRONYMS, ARTICLES, PREPOSITIONS, VALID_TWO_LETTER_WORDS
+from .hardcoded_words import (
+    ACRONYMS,
+    ARTICLES,
+    PREFIXES,
+    PREPOSITIONS,
+    SPECIAL,
+    VALID_TWO_LETTER_WORDS,
+)
 
 # Globals
 
-nltk.download("averaged_perceptron_tagger")
-nltk.download("punkt")
+nltk.download("averaged_perceptron_tagger", quiet=True)
+nltk.download("punkt", quiet=True)
+
+# Types
 
 
 @dataclasses.dataclass
 class WordInfo:
-    word: str
-    is_acronym: bool
-    is_after_puncutation: bool
-    is_article: bool
-    is_coordinating_conjuction: bool
-    is_first_word: bool
-    is_first_word_of_paranthetical: bool
-    is_hyphenated: bool
-    is_last_word: bool
-    is_plural_acronym: bool
-    is_preposition: bool
-    is_subordinating_conjuction: bool
+    word: str = ""
+    is_acronym: bool = False
+    is_after_puncutation: bool = False
+    is_article: bool = False
+    is_coordinating_conjuction: bool = False
+    is_first_word: bool = False
+    is_first_word_of_paranthetical: bool = False
+    is_hyphenated: bool = False
+    is_last_word: bool = False
+    is_plural_acronym: bool = False
+    is_prefix: bool = False
+    is_preposition: bool = False
+    is_proper: bool = False
+    is_subordinating_conjuction: bool = False
 
 
 class Styler:
-    def __init__(self, title: str, acronyms: set[str] = ACRONYMS):
-        """Title is required to be passed in. Acronyms may be passed in since it is desireable
-        for the user to be able to define a custom list of acronyms, e.g. for a specific field.
+    def __init__(
+        self,
+        title: str,
+        acronyms: set[str] = ACRONYMS,
+        special: dict[str, str] = SPECIAL,
+    ):
+        """Title is required to be passed in. Acronyms may be passed in since it is
+        desireable for the user to be able to define a custom list of acronyms, e.g. for
+        a specific field.
 
         Args:
             title (str): The title
             acronyms (set[str], optional): A set of acronyms. Defaults to ACRONYMS.
         """
-        self._title: str = title
-        self._acronyms: set[str] = acronyms
-        self._words: list[str] = self.clean_and_split_title()
-        self._tagged_words: list[WordInfo] = self.tag_words()
+        self._title = title
+        self._acronyms = acronyms
+        self._special = special
+        self._words = self.clean_and_split_title()
+        self._tagged_words = self.tag_words(self._words)
 
     def clean_and_split_title(self) -> list[str]:
         title = self._title
@@ -61,18 +79,18 @@ class Styler:
         return word[0] == "(" and word[-1] == ")"
 
     def is_acronym(self, word: str) -> bool:
-        """There is no good way of determining if a a word is an acronym. Therefore, several
-        heuristics are used.
+        """There is no good way of determining if a a word is an acronym. Therefore,
+        several heuristics are used.
 
         1. Word is in a pre-defined list of acronyms
-        2. Word contains "&" or "/", e.g. K&R, A/B. It is unlikely that a non-acronym word would
-        contain these characters.
-        3. Word is between parantheses AND word is four letters or less. In a title specifically,
-        parantheses likely do not denote a note (like so), rather, they more likely contain an
-        acronym, e.g. County Business Patterns (CBP)
-        4. Word is two letters (and word is not in valid two letter words, a manual list of all
-        two letter words). Note that this list does not contain "us", since it is much more likely
-        that "us" refers to "US" in a title.
+        2. Word contains "&" or "/", e.g. K&R, A/B. It is unlikely that a non-acronym
+        word would contain these characters.
+        3. Word is between parantheses AND word is four letters or less. In a title
+        specifically, parantheses likely do not denote a note (like so), rather, they
+        more likely contain an acronym, e.g. County Business Patterns (CBP)
+        4. Word is two letters (and word is not in valid two letter words, a manual list
+        of all two letter words). Note that this list does not contain "us", since it is
+        much more likely that "us" refers to "US" in a title.
 
         Args:
             word (str): _description_
@@ -111,6 +129,14 @@ class Styler:
         return word not in PREPOSITIONS and tag == "IN"
 
     @staticmethod
+    def is_proper(tag: str) -> bool:
+        return tag in {"NNP", "NNPS"}
+
+    @staticmethod
+    def is_prefix(word: str) -> bool:
+        return word in PREFIXES
+
+    @staticmethod
     def is_preposition(word: str) -> bool:
         return word in PREPOSITIONS
 
@@ -119,7 +145,8 @@ class Styler:
         return "-" in word and word[-1] != "-"
 
     @staticmethod
-    def lowercase_after_dash(word: str, dash_pos: int) -> str:
+    def lowercase_after_dash(word: str) -> str:
+        dash_pos = word.index("-")
         before_dash = word[: dash_pos + 1].title()
         after_dash = word[dash_pos + 2 :]
 
@@ -145,9 +172,16 @@ class Styler:
         return cutils.contains(word[0], ("(", "{"))
 
     @staticmethod
+    def uppercase_plural_acronyms(word: str) -> str:
+        last_s = cutils.find_last_index(word, "s")
+        correct_word = word[:last_s].upper() + "s" + word[last_s + 1 :].upper()
+
+        return correct_word
+
+    @staticmethod
     def capitalize(word: str) -> str:
-        """Capitalize but ignore punctuation. This is needed because the builtin .capitalize()
-        method will return "(the" from "(the" instead of "(The".
+        """Capitalize but ignore punctuation. This is needed because the builtin
+        .capitalize() method will return "(the" from "(the" instead of "(The".
 
         Args:
             word (str): word
@@ -166,8 +200,17 @@ class Styler:
 
         return "".join(word_lst)
 
-    def tag_words(self):
-        nltk_tags = nltk.pos_tag(self._words)
+    def replace_special(self, word: str) -> str:
+        key = word.lower()
+        if key in self._special:
+            corrected_word = self._special[key]
+        else:
+            corrected_word = word
+
+        return corrected_word
+
+    def tag_words(self, word_list: list[str]) -> list[WordInfo]:
+        nltk_tags = nltk.pos_tag(word_list)
         tagged_words = []
         for idx, word_tag in enumerate(nltk_tags):
             word, tag = word_tag
@@ -175,10 +218,10 @@ class Styler:
             if idx != 0:
                 previous_word, _ = nltk_tags[idx - 1]
             else:
-                # If this is the first word, idx - 1 is -1, and is therefore the last word in the
-                # list. Since we just use the previous word to test if it comes after punctuation
-                # setting the previous word to something w/o punctuation makes is_after_punctuation
-                # return False.
+                # If this is the first word, idx - 1 is -1, and is therefore the last
+                # word in the list. Since we just use the previous word to test if it
+                # comes after punctuation setting the previous word to something w/o
+                # punctuation makes is_after_punctuation return False.
                 previous_word = "SENTINEL"
 
             tagged_word = WordInfo(
@@ -196,12 +239,81 @@ class Styler:
                 is_first_word_of_paranthetical=self.is_first_word_of_paranthetical(
                     word
                 ),
+                is_proper=self.is_proper(tag),
             )
             tagged_words.append(tagged_word)
 
         return tagged_words
 
-    def chicago_case(self) -> str:
+
+class ChicagoStyler(Styler):
+    def __init__(
+        self,
+        title: str,
+        acronyms: set[str] = ACRONYMS,
+        special: dict[str, str] = SPECIAL,
+    ):
+        super().__init__(title, acronyms, special)
+
+    def _correct_hyphenated_word(self, word: str) -> str:
+        """
+        As per the Chicago style manual:
+        1. Always capitalize the first element.
+        2. Capitalize any subsequent elements unless they are articles, prepositions,
+        coordinating conjunctions (and, but, for, or, nor), or such modifiers as flat or
+        sharp following musical key symbols.
+        3. If the first element is merely a prefix or combining form that could not
+        stand by itself as a word (anti, pre, etc.), do not capitalize the second
+        element unless it is a proper noun or proper adjective.
+        4. Capitalize the second element in a hyphenated spelled-out number
+        (twenty-first, etc.) or hyphenated simple fraction
+        (two-thirds in two-thirds majority).
+
+        The 7 musical notes are A, B, C, D, E, F, G
+        """
+        tagged_words: list[WordInfo] = self.tag_words(word.split("-"))
+        musical_notes = {"a", "b", "c", "d", "e", "f", "g"}
+        musical_modifiers = {"sharp", "flat"}
+
+        corrected = []
+        for idx, word_info in enumerate(tagged_words):
+            w = word_info.word
+
+            if idx != 0:
+                prev = tagged_words[idx - 1]
+            else:
+                prev = WordInfo()
+
+            prev_w = prev.word
+
+            # Since first part is always capitalized, short-circuit
+            if idx == 0:
+                corrected.append(w.capitalize())
+                continue
+
+            cw = w.capitalize()
+
+            if w in musical_modifiers and prev_w in musical_notes:
+                cw = w
+
+            if (
+                word_info.is_coordinating_conjuction
+                or word_info.is_article
+                or word_info.is_preposition
+            ):
+                cw = w
+
+            if prev.is_prefix:
+                cw = w
+
+            if word_info.is_proper:
+                cw = w.capitalize()
+
+            corrected.append(cw)
+
+        return "-".join(corrected)
+
+    def title_case(self) -> str:
         corrected = []
         for word_info in self._tagged_words:
             word = word_info.word
@@ -228,13 +340,17 @@ class Styler:
                 correct_word = word.upper()
 
             if word_info.is_plural_acronym:
-                last_s = cutils.find_last_index(word, "s")
-                correct_word = word[:last_s].upper() + "s" + word[last_s + 1 :].upper()
+                correct_word = self.uppercase_plural_acronyms(word)
 
             if word_info.is_hyphenated:
-                dash_pos = word.index("-")
-                correct_word = self.lowercase_after_dash(word, dash_pos)
+                correct_word = self._correct_hyphenated_word(word)
 
+            correct_word = self.replace_special(correct_word)
             corrected.append(correct_word)
 
         return " ".join(corrected)
+
+    # Capitalize the first word of the title/heading and of any subtitle/subheading
+    # Capitalize all major words (nouns, verbs including phrasal verbs such as “play with”, adjectives, adverbs, and pronouns) in the title/heading, including the second part of hyphenated major words (e.g., Self-Report not Self-report)
+    # Capitalize all words of four letters or more.
+    # Lowercase the second word after a hyphenated prefix (e.g., Mid-, Anti-, Super-, etc.) in compound modifiers (e.g., Mid-year, Anti-hero, etc.).
