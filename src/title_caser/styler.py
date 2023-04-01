@@ -9,6 +9,7 @@ import nltk
 from .hardcoded_words import (
     ACRONYMS,
     ARTICLES,
+    PREFIXES,
     PREPOSITIONS,
     SPECIAL,
     VALID_TWO_LETTER_WORDS,
@@ -24,18 +25,20 @@ nltk.download("punkt", quiet=True)
 
 @dataclasses.dataclass
 class WordInfo:
-    word: str
-    is_acronym: bool
-    is_after_puncutation: bool
-    is_article: bool
-    is_coordinating_conjuction: bool
-    is_first_word: bool
-    is_first_word_of_paranthetical: bool
-    is_hyphenated: bool
-    is_last_word: bool
-    is_plural_acronym: bool
-    is_preposition: bool
-    is_subordinating_conjuction: bool
+    word: str = ""
+    is_acronym: bool = False
+    is_after_puncutation: bool = False
+    is_article: bool = False
+    is_coordinating_conjuction: bool = False
+    is_first_word: bool = False
+    is_first_word_of_paranthetical: bool = False
+    is_hyphenated: bool = False
+    is_last_word: bool = False
+    is_plural_acronym: bool = False
+    is_prefix: bool = False
+    is_preposition: bool = False
+    is_proper: bool = False
+    is_subordinating_conjuction: bool = False
 
 
 class Styler:
@@ -57,7 +60,7 @@ class Styler:
         self._acronyms = acronyms
         self._special = special
         self._words = self.clean_and_split_title()
-        self._tagged_words = self.tag_words()
+        self._tagged_words = self.tag_words(self._words)
 
     def clean_and_split_title(self) -> list[str]:
         title = self._title
@@ -126,6 +129,14 @@ class Styler:
         return word not in PREPOSITIONS and tag == "IN"
 
     @staticmethod
+    def is_proper(tag: str) -> bool:
+        return tag in {"NNP", "NNPS"}
+
+    @staticmethod
+    def is_prefix(word: str) -> bool:
+        return word in PREFIXES
+
+    @staticmethod
     def is_preposition(word: str) -> bool:
         return word in PREPOSITIONS
 
@@ -189,8 +200,17 @@ class Styler:
 
         return "".join(word_lst)
 
-    def tag_words(self) -> list[WordInfo]:
-        nltk_tags = nltk.pos_tag(self._words)
+    def replace_special(self, word: str) -> str:
+        key = word.lower()
+        if key in self._special:
+            corrected_word = self._special[key]
+        else:
+            corrected_word = word
+
+        return corrected_word
+
+    def tag_words(self, word_list: list[str]) -> list[WordInfo]:
+        nltk_tags = nltk.pos_tag(word_list)
         tagged_words = []
         for idx, word_tag in enumerate(nltk_tags):
             word, tag = word_tag
@@ -219,6 +239,7 @@ class Styler:
                 is_first_word_of_paranthetical=self.is_first_word_of_paranthetical(
                     word
                 ),
+                is_proper=self.is_proper(tag),
             )
             tagged_words.append(tagged_word)
 
@@ -233,6 +254,64 @@ class ChicagoStyler(Styler):
         special: dict[str, str] = SPECIAL,
     ):
         super().__init__(title, acronyms, special)
+
+    def _correct_hyphenated_word(self, word: str) -> str:
+        """
+        As per the Chicago style manual:
+        1. Always capitalize the first element.
+        2. Capitalize any subsequent elements unless they are articles, prepositions,
+        coordinating conjunctions (and, but, for, or, nor), or such modifiers as flat or
+        sharp following musical key symbols.
+        3. If the first element is merely a prefix or combining form that could not
+        stand by itself as a word (anti, pre, etc.), do not capitalize the second
+        element unless it is a proper noun or proper adjective.
+        4. Capitalize the second element in a hyphenated spelled-out number
+        (twenty-first, etc.) or hyphenated simple fraction
+        (two-thirds in two-thirds majority).
+
+        The 7 musical notes are A, B, C, D, E, F, G
+        """
+        tagged_words: list[WordInfo] = self.tag_words(word.split("-"))
+        musical_notes = {"a", "b", "c", "d", "e", "f", "g"}
+        musical_modifiers = {"sharp", "flat"}
+
+        corrected = []
+        for idx, word_info in enumerate(tagged_words):
+            w = word_info.word
+
+            if idx != 0:
+                prev = tagged_words[idx - 1]
+            else:
+                prev = WordInfo()
+
+            prev_w = prev.word
+
+            # Since first part is always capitalized, short-circuit
+            if idx == 0:
+                corrected.append(w.capitalize())
+                continue
+
+            cw = w.capitalize()
+
+            if w in musical_modifiers and prev_w in musical_notes:
+                cw = w
+
+            if (
+                word_info.is_coordinating_conjuction
+                or word_info.is_article
+                or word_info.is_preposition
+            ):
+                cw = w
+
+            if prev.is_prefix:
+                cw = w
+
+            if word_info.is_proper:
+                cw = w.capitalize()
+
+            corrected.append(cw)
+
+        return "-".join(corrected)
 
     def title_case(self) -> str:
         corrected = []
@@ -264,8 +343,9 @@ class ChicagoStyler(Styler):
                 correct_word = self.uppercase_plural_acronyms(word)
 
             if word_info.is_hyphenated:
-                correct_word = self.lowercase_after_dash(word)
+                correct_word = self._correct_hyphenated_word(word)
 
+            correct_word = self.replace_special(correct_word)
             corrected.append(correct_word)
 
         return " ".join(corrected)
