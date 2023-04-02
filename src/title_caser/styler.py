@@ -58,6 +58,7 @@ LOADER = SpacyModelLoader()
 @dataclasses.dataclass
 class WordInfo:
     word: str = ""
+    tag: str = ""
     is_acronym: bool = False
     is_after_puncutation: bool = False
     is_article: bool = False
@@ -279,21 +280,22 @@ class Styler:
 
             tagged_word = WordInfo(
                 word=word,
+                tag=tag,
                 is_acronym=self.is_acronym(word),
-                is_plural_acronym=self.is_plural_acronym(word),
+                is_after_puncutation=self.is_after_punctuation(previous_word),
                 is_article=self.is_article(word),
                 is_coordinating_conjuction=self.is_coordinating_conjunction(tag),
-                is_preposition=self.is_preposition(word),
                 is_first_word=(idx == 0),
-                is_last_word=(idx == len(model_tags) - 1),
-                is_hyphenated=self.is_hyphenated(word),
-                is_subordinating_conjuction=self.is_subordinating_conjuction(word, tag),
-                is_after_puncutation=self.is_after_punctuation(previous_word),
                 is_first_word_of_paranthetical=self.is_first_word_of_paranthetical(
                     word
                 ),
+                is_hyphenated=self.is_hyphenated(word),
+                is_last_word=(idx == len(model_tags) - 1),
+                is_plural_acronym=self.is_plural_acronym(word),
                 is_prefix=self.is_prefix(word),
+                is_preposition=self.is_preposition(word),
                 is_proper=self.is_proper(tag),
+                is_subordinating_conjuction=self.is_subordinating_conjuction(word, tag),
             )
             tagged_words.append(tagged_word)
 
