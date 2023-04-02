@@ -288,7 +288,6 @@ PREFIXES = {
     "inter",
     "intra",
     "non",
-    "ob",
     "peri",
     "post",
     "pre",
