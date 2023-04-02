@@ -295,6 +295,8 @@ ACRONYMS = {
     "ucla",
     "unicef",
     "url",
+    "wia",
+    "wic",
     "usa",
     "usada",
     "usc",
