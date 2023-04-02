@@ -1,10 +1,12 @@
 # Imports
 
 import dataclasses
+import enum
 import string
 
 import cutils
 import nltk
+import spacy
 
 from .hardcoded_words import (
     ACRONYMS,
@@ -21,6 +23,30 @@ nltk.download("averaged_perceptron_tagger", quiet=True)
 nltk.download("punkt", quiet=True)
 
 # Types
+
+
+class SpacyModel(enum.StrEnum):
+    LG = "en_core_web_lg"
+    SM = "en_core_web_sm"
+    MD = "en_core_web_md"
+    TRF = "en_core_web_trf"
+
+
+class SpacyModelLoader:
+    def __init__(self) -> None:
+        self._models: dict[SpacyModel, spacy.Language] = {}
+
+    def load(self, model: SpacyModel):
+        if model not in self._models:
+            nlp = spacy.load(model)
+            self._models[model] = nlp
+
+            return nlp
+
+        return self._models[model]
+
+
+LOADER = SpacyModelLoader()
 
 
 @dataclasses.dataclass
@@ -41,12 +67,25 @@ class WordInfo:
     is_subordinating_conjuction: bool = False
 
 
+class WhitespaceTokenizer(object):
+    def __init__(self, vocab: spacy.vocab.Vocab):
+        self.vocab = vocab
+
+    def __call__(self, text: str):
+        words = text.split(" ")
+        # All tokens 'own' a subsequent space character in this tokenizer
+        spaces = [True] * len(words)
+
+        return spacy.tokens.Doc(self.vocab, words=words, spaces=spaces)
+
+
 class Styler:
     def __init__(
         self,
         title: str,
         acronyms: set[str] = ACRONYMS,
         special: dict[str, str] = SPECIAL,
+        model: SpacyModel = SpacyModel.LG,
     ):
         """Title is required to be passed in. Acronyms may be passed in since it is
         desireable for the user to be able to define a custom list of acronyms, e.g. for
@@ -56,19 +95,22 @@ class Styler:
             title (str): The title
             acronyms (set[str], optional): A set of acronyms. Defaults to ACRONYMS.
         """
+        self._nlp = LOADER.load(model)
+        self._nlp.tokenizer = WhitespaceTokenizer(self._nlp.vocab)
+
         self._title = title
         self._acronyms = acronyms
         self._special = special
-        self._words = self.clean_and_split_title()
+        self._words = self.clean_title()
         self._tagged_words = self.tag_words(self._words)
 
-    def clean_and_split_title(self) -> list[str]:
+    def clean_title(self) -> str:
         title = self._title
         title = title.strip()  # strip whitespace off ends
         title = " ".join(title.split())  # normalize whitespace to one
         title = title.lower()
 
-        return title.split()
+        return title
 
     @staticmethod
     def is_article(word) -> bool:
@@ -209,14 +251,15 @@ class Styler:
 
         return corrected_word
 
-    def tag_words(self, word_list: list[str]) -> list[WordInfo]:
-        nltk_tags = nltk.pos_tag(word_list)
+    def tag_words(self, words: str) -> list[WordInfo]:
+        doc = self._nlp(words)
+        model_tags = [(token.text, token.tag_) for token in doc]
         tagged_words = []
-        for idx, word_tag in enumerate(nltk_tags):
+        for idx, word_tag in enumerate(model_tags):
             word, tag = word_tag
 
             if idx != 0:
-                previous_word, _ = nltk_tags[idx - 1]
+                previous_word, _ = model_tags[idx - 1]
             else:
                 # If this is the first word, idx - 1 is -1, and is therefore the last
                 # word in the list. Since we just use the previous word to test if it
@@ -232,13 +275,14 @@ class Styler:
                 is_coordinating_conjuction=self.is_coordinating_conjunction(tag),
                 is_preposition=self.is_preposition(word),
                 is_first_word=(idx == 0),
-                is_last_word=(idx == len(nltk_tags) - 1),
+                is_last_word=(idx == len(model_tags) - 1),
                 is_hyphenated=self.is_hyphenated(word),
                 is_subordinating_conjuction=self.is_subordinating_conjuction(word, tag),
                 is_after_puncutation=self.is_after_punctuation(previous_word),
                 is_first_word_of_paranthetical=self.is_first_word_of_paranthetical(
                     word
                 ),
+                is_prefix=self.is_prefix(word),
                 is_proper=self.is_proper(tag),
             )
             tagged_words.append(tagged_word)
@@ -271,7 +315,7 @@ class ChicagoStyler(Styler):
 
         The 7 musical notes are A, B, C, D, E, F, G
         """
-        tagged_words: list[WordInfo] = self.tag_words(word.split("-"))
+        tagged_words = self.tag_words(" ".join(word.split("-")))
         musical_notes = {"a", "b", "c", "d", "e", "f", "g"}
         musical_modifiers = {"sharp", "flat"}
 
