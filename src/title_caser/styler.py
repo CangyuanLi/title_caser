@@ -68,7 +68,7 @@ class WordInfo:
 
 
 class WhitespaceTokenizer(object):
-    def __init__(self, vocab: spacy.vocab.Vocab):
+    def __init__(self, vocab: spacy.vocab.Vocab) -> None:
         self.vocab = vocab
 
     def __call__(self, text: str):
@@ -296,7 +296,7 @@ class ChicagoStyler(Styler):
         title: str,
         acronyms: set[str] = ACRONYMS,
         special: dict[str, str] = SPECIAL,
-    ):
+    ) -> None:
         super().__init__(title, acronyms, special)
 
     def _correct_hyphenated_word(self, word: str) -> str:
