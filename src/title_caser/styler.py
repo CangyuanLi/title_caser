@@ -32,9 +32,15 @@ class SpacyModel(enum.StrEnum):
     TRF = "en_core_web_trf"
 
 
+DEFAULT_SPACY_MODEL = spacy.load(SpacyModel.LG)
+
+
 class SpacyModelLoader:
     def __init__(self) -> None:
-        self._models: dict[SpacyModel, spacy.Language] = {}
+        # Load the default model
+        self._models: dict[SpacyModel, spacy.Language] = {
+            SpacyModel.LG: DEFAULT_SPACY_MODEL
+        }
 
     def load(self, model: SpacyModel):
         if model not in self._models:
@@ -68,12 +74,16 @@ class WordInfo:
 
 
 class WhitespaceTokenizer(object):
+    """By default, spacy splits on things other than the whitespace, including dashes,
+    and so on. We want to split ONLY on the whitespace.
+    """
+
     def __init__(self, vocab: spacy.vocab.Vocab) -> None:
         self.vocab = vocab
 
     def __call__(self, text: str):
         words = text.split(" ")
-        # All tokens 'own' a subsequent space character in this tokenizer
+        # All tokens "own" a subsequent space character in this tokenizer
         spaces = [True] * len(words)
 
         return spacy.tokens.Doc(self.vocab, words=words, spaces=spaces)
