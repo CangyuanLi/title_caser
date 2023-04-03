@@ -131,6 +131,12 @@ class Styler:
     def between_parantheses(word: str) -> bool:
         return word[0] == "(" and word[-1] == ")"
 
+    @staticmethod
+    def has_no_vowels(word: str) -> bool:
+        vowels = "aeiouy"  # Consider "y" a vowel, don't want, e.g. spy to be an acronym
+
+        return all(char not in vowels for char in word)
+
     def is_acronym(self, word: str) -> bool:
         """There is no good way of determining if a a word is an acronym. Therefore,
         several heuristics are used.
@@ -151,10 +157,15 @@ class Styler:
         Returns:
             _type_: _description_
         """
+        words_with_no_vowels = {"crwth", "crwths", "cwm", "cwms"}
         word_no_punc = word.translate(word.maketrans("", "", string.punctuation))
         word_no_punc_len = len(word_no_punc)
         cond = (
             word_no_punc in self._acronyms
+            or (
+                self.has_no_vowels(word_no_punc)
+                and word_no_punc not in words_with_no_vowels
+            )
             or cutils.contains(word, {"&", "/"})
             or (self.between_parantheses(word) and word_no_punc_len <= 4)
             or word_no_punc_len == 2
