@@ -2,6 +2,7 @@
 
 import dataclasses
 import enum
+import re
 import string
 
 import cutils
@@ -71,6 +72,7 @@ class WordInfo:
     is_prefix: bool = False
     is_preposition: bool = False
     is_proper: bool = False
+    is_roman_numeral: bool = False
     is_subordinating_conjuction: bool = False
 
 
@@ -136,6 +138,12 @@ class Styler:
         vowels = "aeiouy"  # Consider "y" a vowel, don't want, e.g. spy to be an acronym
 
         return all(char not in vowels for char in word)
+
+    @staticmethod
+    def is_roman_numeral(word: str) -> bool:
+        r = re.compile(r"^M{0,3}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$")
+
+        return bool(re.search(r, word))
 
     def is_acronym(self, word: str) -> bool:
         """There is no good way of determining if a a word is an acronym. Therefore,
@@ -306,6 +314,7 @@ class Styler:
                 is_prefix=self.is_prefix(word),
                 is_preposition=self.is_preposition(word),
                 is_proper=self.is_proper(tag),
+                is_roman_numeral=self.is_roman_numeral(word),
                 is_subordinating_conjuction=self.is_subordinating_conjuction(word, tag),
             )
             tagged_words.append(tagged_word)
