@@ -367,7 +367,7 @@ VALID_TWO_LETTER_WORDS = {
 }  # no "us" because in title it is much more likely to refer to "US"
 
 # These are special words that will simply be replaced according to a match
-_special = {"iPhone", "iPad", "iPod", "E-mail", "WiFi"}
+_special = {"iPhone", "iPad", "iPod", "E-mail", "WiFi", "PhD", "Ph.D.", "BSc"}
 SPECIAL = {word.lower(): word for word in _special}
 
 # List of prefixes- these cannot stand on their own
