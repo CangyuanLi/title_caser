@@ -334,11 +334,12 @@ ACRONYMS = {
     "wearc",
     "wia",
     "wic",
-    "wic",
+    "wpa",
     "wmti",
     "yolo",
     "ytd",
     "ytm",
+    "xcom",
 }
 
 VALID_TWO_LETTER_WORDS = {
