@@ -137,6 +137,7 @@ ACRONYMS = {
     "ahrq",
     "ama",
     "amex",
+    "amd",
     "amzn",
     "apa",
     "apr",
