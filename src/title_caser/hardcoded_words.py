@@ -324,6 +324,8 @@ ACRONYMS = {
     "usada",
     "usc",
     "usda",
+    "usps",
+    "usq",
     "uss",
     "ussr",
     "uti",
