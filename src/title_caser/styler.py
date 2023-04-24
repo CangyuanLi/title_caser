@@ -163,7 +163,7 @@ class Styler:
             word (str): _description_
 
         Returns:
-            _type_: _description_
+            bool: _description_
         """
         words_with_no_vowels = {"crwth", "crwths", "cwm", "cwms"}
         word_no_punc = word.translate(word.maketrans("", "", string.punctuation))

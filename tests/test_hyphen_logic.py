@@ -17,6 +17,9 @@ TITLES = [
     "Atari's Twenty-First-Century Adherents",
     "Are We All a Little Stalker-ish?",
     "Organic Tomato-y Pasta with Vegetables",
+    "The Best Bong Joon-ho Movies",
+    "Don't Come Home A-drinkin'",
+    "Subscribe to Our E-mail List and Get a T-shirt Coupon Code!",
 ]
 
 

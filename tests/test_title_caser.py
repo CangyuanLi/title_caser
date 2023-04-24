@@ -19,3 +19,8 @@ def test_chicago():
     )
 
     assert ChicagoStyler("twenty-first f-sharp").title_case() == "Twenty-First F-sharp"
+
+    assert (
+        ChicagoStyler("Insert Knob A in Hole B").title_case()
+        == "Insert Knob A in Hole B"
+    )
